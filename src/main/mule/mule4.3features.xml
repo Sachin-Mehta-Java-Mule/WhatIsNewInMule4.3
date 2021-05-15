@@ -1,5 +1,200 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<mule xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+<mule xmlns:redis="http://www.mulesoft.org/schema/mule/redis"
+	xmlns:kafka="http://www.mulesoft.org/schema/mule/kafka"
+	xmlns:db="http://www.mulesoft.org/schema/mule/db"
+	xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns:apikit="http://www.mulesoft.org/schema/mule/mule-apikit"
+	xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
 	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-	xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd"></mule>
+	xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/mule-apikit http://www.mulesoft.org/schema/mule/mule-apikit/current/mule-apikit.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd
+http://www.mulesoft.org/schema/mule/kafka http://www.mulesoft.org/schema/mule/kafka/current/mule-kafka.xsd
+http://www.mulesoft.org/schema/mule/redis http://www.mulesoft.org/schema/mule/redis/current/mule-redis.xsd">
+	<apikit:config
+		outboundHeadersMapName="outboundHeadersMapName"
+		httpStatusVarName="httpStatus" doc:name="Router"
+		doc:id="95a66a50-956f-4858-a3a1-39057db37ff7" name="Router"
+		api="mule4.3features.yaml" />
+	<http:listener-config name="HTTP_Listener_config"
+		doc:name="HTTP Listener config"
+		doc:id="6bcf5f28-216c-42ba-b1f4-76889496a493">
+		<http:listener-connection host="0.0.0.0"
+			port="8081" />
+	</http:listener-config>
+	<db:config name="Database_Config" doc:name="Database Config"
+		doc:id="bf67905d-f26f-41cb-ad4e-bd9b7e223e7b">
+		<db:generic-connection
+			url="jdbc:postgresql://localhost:5432/postgres"
+			driverClassName="org.postgresql.Driver" user="postgres"
+			password="postgres" />
+	</db:config>
+	<kafka:producer-config
+		name="Apache_Kafka_Producer_configuration"
+		doc:name="Apache Kafka Producer configuration"
+		doc:id="12007f50-ca4b-4c63-bf1f-0619dc55eebb">
+		<kafka:producer-plaintext-connection>
+			<kafka:bootstrap-servers>
+				<kafka:bootstrap-server
+					value="localhost:9092" />
+			</kafka:bootstrap-servers>
+		</kafka:producer-plaintext-connection>
+	</kafka:producer-config>
+	<kafka:consumer-config
+		name="Apache_Kafka_Consumer_configuration"
+		doc:name="Apache Kafka Consumer configuration"
+		doc:id="9f1288da-ff4e-488d-9be5-5dd32714d8e0">
+		<kafka:consumer-plaintext-connection
+			groupId="test-consumer-group">
+			<kafka:bootstrap-servers>
+				<kafka:bootstrap-server
+					value="localhost:9092" />
+			</kafka:bootstrap-servers>
+			<kafka:topic-patterns>
+				<kafka:topic-pattern value="muleesb" />
+			</kafka:topic-patterns>
+		</kafka:consumer-plaintext-connection>
+	</kafka:consumer-config>
+	<redis:redis-config name="Redis_Redis"
+		doc:name="Redis Redis" doc:id="cd01946a-8df6-4bba-b12e-236d04f0ead1">
+		<redis:nonclustered-connection />
+	</redis:redis-config>
+	<flow name="mule4.3featuresFlow"
+		doc:id="f5e9376b-1fb6-4ce8-9eba-980225d4cce1">
+		<http:listener doc:name="Listener"
+			doc:id="83ffd562-cc7f-4835-940a-0017f1b81638"
+			config-ref="HTTP_Listener_config" path="/api/*" />
+		<apikit:router doc:name="APIkit Router"
+			doc:id="2f4aef7e-aaf3-423b-b523-cd24a6d9ae38" config-ref="Router" />
+		<error-handler ref="allErrorHandler" />
+	</flow>
+
+
+
+
+	<flow name="lp.consumer-api-console">
+		<http:listener config-ref="HTTP_Listener_config"
+			path="/console/*">
+			<http:response
+				statusCode="#[vars.httpStatus default 200]">
+				<http:headers>#[vars.outboundHeaders default {}]</http:headers>
+			</http:response>
+			<http:error-response
+				statusCode="#[vars.httpStatus default 500]">
+				<http:body>#[payload]</http:body>
+				<http:headers>#[vars.outboundHeaders default {}]</http:headers>
+			</http:error-response>
+		</http:listener>
+		<apikit:console config-ref="Router" />
+		<error-handler>
+			<on-error-propagate type="APIKIT:NOT_FOUND">
+				<ee:transform
+					xsi:schemaLocation="
+http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd 
+http://www.mulesoft.org/schema/mule/mule-apikit http://www.mulesoft.org/schema/mule/mule-apikit/current/mule-apikit.xsd 
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd"
+					doc:id="7ca2ff38-c8dc-495b-98d4-f27b3bbf0c47">
+					<ee:message>
+						<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{message: "Resource not found"}]]></ee:set-payload>
+					</ee:message>
+					<ee:variables>
+						<ee:set-variable variableName="httpStatus">404
+						</ee:set-variable>
+					</ee:variables>
+				</ee:transform>
+			</on-error-propagate>
+		</error-handler>
+	</flow>
+	<flow name="mule4.3featuresFlow1"
+		doc:id="94ad35c0-abc9-48d6-ae6c-1c087397d77f">
+		<kafka:message-listener
+			doc:name="Message listener"
+			doc:id="bba3cae7-4ca4-4ad4-a2fa-0af56d50ca59"
+			config-ref="Apache_Kafka_Consumer_configuration" />
+		<redis:set doc:name="Set"
+			doc:id="364aa34b-4c5e-4eb2-8168-bb0c58eb7246"
+			config-ref="Redis_Redis"
+			key="#[read(payload, 'application/json').id]">
+		</redis:set>
+		<logger level="INFO" doc:name="Logger"
+			doc:id="a1c96a50-9e0c-4fa8-976a-6b06f602a22c" message="#[payload]" />
+	</flow>
+	<flow name="get:\testFeature1:Router"
+		doc:id="a7ccb5c8-1aa3-43d8-9819-382cac9e4c82">
+		<db:select doc:name="Select"
+			doc:id="142e3e72-5d28-4274-b447-fd4ccf47b668"
+			config-ref="Database_Config" target="dbResults">
+			<db:sql><![CDATA[select * from sample_table]]></db:sql>
+		</db:select>
+		<ee:transform doc:name="Transform Message"
+			doc:id="456d5c40-238b-42d9-8a89-e82310e78e6c">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"sdfdfs" : vars.dbResults[0].column2
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+
+	</flow>
+
+	<flow name="get:\redisTest:Router"
+		doc:id="f37bef5f-62b6-446e-9666-e5ba73f7f56e">
+		<redis:get doc:name="Get"
+			doc:id="f3ef0782-5fab-448d-8962-c83a44cd73b2"
+			config-ref="Redis_Redis" key="#[attributes.Headers.'id']" />
+		<ee:transform doc:name="Transform Message"
+			doc:id="52e8a8bc-5fe7-4261-8a03-c5d14c18f2e4">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+if(!isEmpty(payload) and !isEmpty(read(payload,'application/json').status) )
+	{
+		"status" : read(payload,'application/json').status
+	}
+else
+	{
+		"error" : "NOT_FOUND",
+		"message" : "Id not found in the system"
+	}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+
+
+	</flow>
+	<flow name="post:\kafkaTest:application\json:Router"
+		doc:id="b1039296-a4ca-4d86-b347-be5d5164f03a">
+		<kafka:publish doc:name="Publish"
+			doc:id="d076bb9d-5023-4ecf-a7ed-b2053a593d93"
+			config-ref="Apache_Kafka_Producer_configuration" topic="muleesb"
+			key="#[now()]" />
+		<set-payload
+			value='#[output application/json
+---
+{
+	"Message": "Message Succesfully published to " ++ payload.topic ++ " at: " ++ payload.timestamp as String {format: "KK:mm:ss a, MMMM dd, uuuu"}
+}]'
+			doc:name="Set Payload" doc:id="465960f6-fab1-429c-8585-cdf37383a49e" />
+
+
+	</flow>
+	<error-handler name="allErrorHandler" >
+  <on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" >
+    <set-payload value="#[error.description]" doc:name="Set Payload" />
+  </on-error-continue>
+</error-handler>
+
+	
+
+</mule>
