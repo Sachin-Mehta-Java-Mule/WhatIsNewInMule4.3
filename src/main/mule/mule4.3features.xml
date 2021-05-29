@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<mule xmlns:redis="http://www.mulesoft.org/schema/mule/redis"
+<mule xmlns:cluster="http://www.mulesoft.org/schema/mule/ee/cluster"
+	xmlns:redis="http://www.mulesoft.org/schema/mule/redis"
 	xmlns:kafka="http://www.mulesoft.org/schema/mule/kafka"
 	xmlns:db="http://www.mulesoft.org/schema/mule/db"
 	xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
@@ -8,8 +9,7 @@
 	xmlns:apikit="http://www.mulesoft.org/schema/mule/mule-apikit"
 	xmlns="http://www.mulesoft.org/schema/mule/core"
 	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
-	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-	xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
 http://www.mulesoft.org/schema/mule/mule-apikit http://www.mulesoft.org/schema/mule/mule-apikit/current/mule-apikit.xsd
 http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
 http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
@@ -190,10 +190,12 @@ else
 
 	</flow>
 	<error-handler name="allErrorHandler" >
-  <on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" >
+		<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue">
     <set-payload value="#[error.description]" doc:name="Set Payload" />
   </on-error-continue>
+
 </error-handler>
+
 
 	
 
